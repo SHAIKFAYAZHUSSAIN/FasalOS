@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/fasal_state.dart';
 import '../theme/app_theme.dart';
 import '../l10n/app_localizations.dart';
-import '../widgets/metric_card.dart';
+import '../models/produce_lot.dart';
 import '../widgets/photo_produce_card.dart';
 import 'intake_flow_sheet.dart';
 import 'lot_detail_sheet.dart';
@@ -10,246 +10,337 @@ import 'lot_detail_sheet.dart';
 class HubDashboardView extends StatefulWidget {
   final FasalState state;
   final ValueChanged<int>? onNavigateTab;
-
-  const HubDashboardView({
-    super.key,
-    required this.state,
-    this.onNavigateTab,
-  });
+  const HubDashboardView({super.key, required this.state, this.onNavigateTab});
 
   @override
   State<HubDashboardView> createState() => _HubDashboardViewState();
 }
 
 class _HubDashboardViewState extends State<HubDashboardView> {
-  String _selectedCropFilter = 'All';
+  String _filter = 'All';
+  ProduceLot? _selectedLot;
+
+  void _openIntake() {
+    final w = MediaQuery.of(context).size.width;
+    if (w >= 700) {
+      showDialog(
+        context: context,
+        builder: (_) => Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          child: SizedBox(
+            width: 560,
+            height: MediaQuery.of(context).size.height * 0.85,
+            child: IntakeFlowSheet(state: widget.state, onCompleted: () => setState(() {})),
+          ),
+        ),
+      );
+    } else {
+      showModalBottomSheet(
+        context: context, isScrollControlled: true, backgroundColor: Colors.transparent,
+        builder: (_) => IntakeFlowSheet(state: widget.state, onCompleted: () => setState(() {})),
+      );
+    }
+  }
+
+  void _openDetail(ProduceLot lot) {
+    final w = MediaQuery.of(context).size.width;
+    if (w >= 1100) {
+      setState(() => _selectedLot = lot);
+    } else {
+      showModalBottomSheet(
+        context: context, isScrollControlled: true, backgroundColor: Colors.transparent,
+        builder: (_) => LotDetailSheet(lot: lot, state: widget.state,
+          onAggregateTapped: () => widget.onNavigateTab?.call(3),
+          onMarketTapped: () => widget.onNavigateTab?.call(2)),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
     final state = widget.state;
     final lots = state.lots;
+    final filtered = _filter == 'All' ? lots
+        : lots.where((l) => l.cropType.toLowerCase().contains(_filter.toLowerCase())).toList();
+    final w = MediaQuery.of(context).size.width;
+    final isDesktop = w >= 1100;
 
-    final filteredLots = _selectedCropFilter == 'All'
-        ? lots
-        : lots.where((l) => l.cropType.toLowerCase().contains(_selectedCropFilter.toLowerCase())).toList();
-
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      physics: const BouncingScrollPhysics(),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Operational Hub Header
+    return Row(
+      children: [
+        Expanded(
+          child: _buildMain(state, lots, filtered, isDesktop),
+        ),
+        // Desktop detail panel
+        if (isDesktop && _selectedLot != null)
           Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: FasalColors.surface,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: FasalColors.borderSubtle),
+            width: 380,
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              border: Border(left: BorderSide(color: Color(0xFFE8ECE4))),
             ),
-            child: Row(
+            child: Column(
               children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(10),
-                  child: Image.asset(
-                    'assets/images/farmer_lakshmi.jpg',
-                    width: 56,
-                    height: 56,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, _, _) => const Icon(Icons.hub, size: 36),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                  decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: Color(0xFFE8ECE4)))),
+                  child: Row(
+                    children: [
+                      Expanded(child: Text(_selectedLot!.id,
+                        style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: Color(0xFF12251A)))),
+                      IconButton(icon: const Icon(Icons.close, size: 18, color: Color(0xFF6B8F72)),
+                        onPressed: () => setState(() => _selectedLot = null)),
+                    ],
                   ),
                 ),
-                const SizedBox(width: 12),
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        l10n.get('hub_name'),
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w800,
-                          color: FasalColors.primaryGreenDark,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      const Text(
-                        'Direct Farmer Aggregation & Solar Cold-Chain Hub',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                          color: FasalColors.textSecondary,
-                        ),
-                      ),
-                    ],
+                  child: SingleChildScrollView(
+                    child: LotDetailSheet(
+                      lot: _selectedLot!,
+                      state: state,
+                      inlineMode: true,
+                      onAggregateTapped: () => widget.onNavigateTab?.call(3),
+                      onMarketTapped: () => widget.onNavigateTab?.call(2),
+                    ),
                   ),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 16),
+      ],
+    );
+  }
 
-          // Primary Intake Action Button (Accessible 48x48+ touch target)
-          SizedBox(
-            width: double.infinity,
-            height: 52,
-            child: ElevatedButton.icon(
-              onPressed: () {
-                showModalBottomSheet(
-                  context: context,
-                  isScrollControlled: true,
-                  backgroundColor: Colors.transparent,
-                  builder: (ctx) => IntakeFlowSheet(
-                    state: state,
-                    onCompleted: () {
-                      setState(() {});
-                    },
-                  ),
-                );
-              },
-              icon: const Icon(Icons.add_circle_outline, size: 22),
-              label: Text(
-                l10n.get('btn_add_produce'),
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+  Widget _buildMain(FasalState state, lots, filtered, bool isDesktop) {
+    return SingleChildScrollView(
+      padding: EdgeInsets.all(isDesktop ? 28 : 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ── KPI Row ──────────────────────────────────────────────────
+          _KpiRow(state: state, onNavigateTab: widget.onNavigateTab),
+          SizedBox(height: isDesktop ? 28 : 16),
+
+          // ── Pipeline Banner ──────────────────────────────────────────
+          _PipelineBanner(state: state),
+          SizedBox(height: isDesktop ? 28 : 16),
+
+          // ── Lots section ─────────────────────────────────────────────
+          Row(
+            children: [
+              Text('Active Farm Lots',
+                style: TextStyle(fontSize: isDesktop ? 18 : 15,
+                  fontWeight: FontWeight.w800, color: const Color(0xFF12251A))),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(color: const Color(0xFFE8F5E9), borderRadius: BorderRadius.circular(20)),
+                child: Text('${filtered.length}',
+                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF2E7D32))),
               ),
-            ),
+              const Spacer(),
+              // Filter chips
+              ...['All', 'Tomatoes', 'Onions', 'Chillies'].map((c) => Padding(
+                padding: const EdgeInsets.only(left: 6),
+                child: _FilterChip(label: c, selected: _filter == c, onTap: () => setState(() => _filter = c)),
+              )),
+              const SizedBox(width: 12),
+              // Add button
+              FilledButton.icon(
+                onPressed: _openIntake,
+                icon: const Icon(Icons.add, size: 18),
+                label: const Text('Add Produce', style: TextStyle(fontWeight: FontWeight.w700)),
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFF2E7D32),
+                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 16),
 
-          // 4 Big Operational Metric Cards
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final isWide = constraints.maxWidth > 500;
-              final crossAxisCount = isWide ? 4 : 2;
+          // ── Lot Grid ─────────────────────────────────────────────────
+          LayoutBuilder(builder: (ctx, box) {
+            final cols = box.maxWidth > 1100 ? 4 : box.maxWidth > 700 ? 3 : box.maxWidth > 400 ? 2 : 1;
+            return GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: cols, crossAxisSpacing: 14, mainAxisSpacing: 14,
+                childAspectRatio: 1.1,
+              ),
+              itemCount: filtered.length,
+              itemBuilder: (_, i) => PhotoProduceCard(
+                lot: filtered[i],
+                isSelected: _selectedLot?.id == filtered[i].id,
+                onTap: () => _openDetail(filtered[i]),
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+}
 
-              return GridView.count(
-                crossAxisCount: crossAxisCount,
-                crossAxisSpacing: 10,
-                mainAxisSpacing: 10,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                childAspectRatio: isWide ? 1.5 : 1.35,
-                children: [
-                  MetricCard(
-                    title: 'Stored Harvest',
-                    value: '${state.totalStoredProduceKg.toInt()}',
-                    unit: 'kg',
-                    subtitle: '${lots.length} farm lots active',
-                    icon: Icons.inventory_2,
-                    accentColor: FasalColors.primaryGreen,
-                    onTap: () {},
-                  ),
-                  MetricCard(
-                    title: 'Solar Contribution',
-                    value: '${state.solar.solarContributionPct}',
-                    unit: '%',
-                    subtitle: 'Clean power offset',
-                    icon: Icons.solar_power,
-                    accentColor: FasalColors.harvestAmber,
-                    onTap: () => widget.onNavigateTab?.call(1),
-                  ),
-                  MetricCard(
-                    title: 'Cold Storage Load',
-                    value: '${state.solar.coldChainConsumptionKwh.toInt()}',
-                    unit: 'kWh',
-                    subtitle: 'Chamber 11.8°C stable',
-                    icon: Icons.ac_unit,
-                    accentColor: FasalColors.coldBlue,
-                    onTap: () => widget.onNavigateTab?.call(1),
-                  ),
-                  MetricCard(
-                    title: 'Farmer Earnings',
-                    value: '₹${state.totalFarmerEarnings.toInt()}',
-                    subtitle: 'Direct DBT settled',
-                    icon: Icons.account_balance,
-                    accentColor: FasalColors.success,
-                    onTap: () => widget.onNavigateTab?.call(5),
-                  ),
-                ],
-              );
-            },
-          ),
-          const SizedBox(height: 20),
+class _KpiRow extends StatelessWidget {
+  final FasalState state;
+  final ValueChanged<int>? onNavigateTab;
+  const _KpiRow({required this.state, this.onNavigateTab});
 
-          // Crop Filter Chips Bar
-          Text(
-            'Active Inbound Farm Lots (${filteredLots.length})',
-            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: FasalColors.textPrimary,
-                ),
-          ),
-          const SizedBox(height: 8),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            physics: const BouncingScrollPhysics(),
-            child: Row(
-              children: ['All', 'Tomatoes', 'Onions', 'Chillies'].map((crop) {
-                final isSel = _selectedCropFilter == crop;
-                return Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: ChoiceChip(
-                    label: Text(crop),
-                    selected: isSel,
-                    onSelected: (val) {
-                      setState(() {
-                        _selectedCropFilter = crop;
-                      });
-                    },
-                    selectedColor: FasalColors.primaryGreen,
-                    backgroundColor: Colors.white,
-                    labelStyle: TextStyle(
-                      fontSize: 12,
-                      fontWeight: isSel ? FontWeight.w700 : FontWeight.w500,
-                      color: isSel ? Colors.white : FasalColors.textPrimary,
-                    ),
-                  ),
-                );
-              }).toList(),
-            ),
-          ),
+  @override
+  Widget build(BuildContext context) {
+    final kpis = [
+      _KpiData('Stored Harvest', '${state.totalStoredProduceKg.toInt()} kg',
+        '${state.lots.length} lots active', Icons.inventory_2_rounded,
+        const Color(0xFF2E7D32), const Color(0xFFE8F5E9), null),
+      _KpiData('Solar Power', '${state.solar.solarContributionPct}%',
+        'Clean energy offset', Icons.solar_power_rounded,
+        const Color(0xFFD97706), const Color(0xFFFEF3C7), 1),
+      _KpiData('Chamber Temp', '${state.solar.chamberTempC}°C',
+        'Stable cold chain', Icons.ac_unit_rounded,
+        const Color(0xFF0284C7), const Color(0xFFE0F2FE), 1),
+      _KpiData('Farmer Earnings', '₹${state.totalFarmerEarnings.toInt()}',
+        'DBT settled direct', Icons.account_balance_rounded,
+        const Color(0xFF7B3F00), const Color(0xFFFFF3E0), 5),
+    ];
+
+    return LayoutBuilder(builder: (_, box) {
+      final cols = box.maxWidth > 600 ? 4 : 2;
+      return GridView.count(
+        crossAxisCount: cols, shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        crossAxisSpacing: 14, mainAxisSpacing: 14,
+        childAspectRatio: cols == 4 ? 2.0 : 1.7,
+        children: kpis.map((k) => _KpiCard(data: k, onNavigateTab: onNavigateTab)).toList(),
+      );
+    });
+  }
+}
+
+class _KpiData {
+  final String title, value, sub;
+  final IconData icon;
+  final Color color, bg;
+  final int? navTarget;
+  const _KpiData(this.title, this.value, this.sub, this.icon, this.color, this.bg, this.navTarget);
+}
+
+class _KpiCard extends StatelessWidget {
+  final _KpiData data;
+  final ValueChanged<int>? onNavigateTab;
+  const _KpiCard({required this.data, this.onNavigateTab});
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: data.navTarget != null ? () => onNavigateTab?.call(data.navTarget!) : null,
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: const Color(0xFFE8ECE4)),
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 8, offset: const Offset(0, 2))],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(children: [
+              Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: data.bg, borderRadius: BorderRadius.circular(8)),
+                child: Icon(data.icon, size: 18, color: data.color)),
+              const Spacer(),
+              if (data.navTarget != null)
+                Icon(Icons.arrow_forward_ios, size: 12, color: data.color.withOpacity(0.5)),
+            ]),
+            const Spacer(),
+            Text(data.value, style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: const Color(0xFF12251A), letterSpacing: -0.5)),
+            const SizedBox(height: 3),
+            Text(data.title, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF4A5A4D))),
+            Text(data.sub, style: const TextStyle(fontSize: 11, color: Color(0xFF8AA890))),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PipelineBanner extends StatelessWidget {
+  final FasalState state;
+  const _PipelineBanner({required this.state});
+
+  @override
+  Widget build(BuildContext context) {
+    final stages = [
+      ('Received', state.lots.where((l) => l.stage == LotStage.received).length, const Color(0xFF6B8F72)),
+      ('Graded', state.lots.where((l) => l.stage == LotStage.graded).length, const Color(0xFFD97706)),
+      ('Cold Store', state.lots.where((l) => l.stage == LotStage.stored).length, const Color(0xFF0284C7)),
+      ('Matched', state.lots.where((l) => l.stage == LotStage.matched).length, const Color(0xFF7B3F00)),
+      ('Dispatched', state.lots.where((l) => l.stage == LotStage.dispatched).length, const Color(0xFF2E7D32)),
+      ('Delivered', state.lots.where((l) => l.stage == LotStage.delivered).length, const Color(0xFF1B4D24)),
+    ];
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFE8ECE4)),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 8, offset: const Offset(0, 2))],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Supply Chain Pipeline',
+            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF4A5A4D))),
           const SizedBox(height: 12),
-
-          // Active Lots Grid/List
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final isWide = constraints.maxWidth > 650;
-              final count = isWide ? 2 : 1;
-
-              return GridView.builder(
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: count,
-                  mainAxisSpacing: 12,
-                  crossAxisSpacing: 12,
-                  childAspectRatio: isWide ? 1.6 : 1.35,
-                ),
-                itemCount: filteredLots.length,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemBuilder: (context, index) {
-                  final lot = filteredLots[index];
-                  return PhotoProduceCard(
-                    lot: lot,
-                    onTap: () {
-                      showModalBottomSheet(
-                        context: context,
-                        isScrollControlled: true,
-                        backgroundColor: Colors.transparent,
-                        builder: (ctx) => LotDetailSheet(
-                          lot: lot,
-                          state: state,
-                          onAggregateTapped: () => widget.onNavigateTab?.call(3),
-                          onMarketTapped: () => widget.onNavigateTab?.call(2),
-                        ),
-                      );
-                    },
-                  );
-                },
+          Row(
+            children: stages.asMap().entries.map((e) {
+              final i = e.key;
+              final s = e.value;
+              return Expanded(
+                child: Row(children: [
+                  Expanded(
+                    child: Column(children: [
+                      Text('${s.$2}', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: s.$3)),
+                      const SizedBox(height: 4),
+                      Text(s.$1, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF6B8F72))),
+                    ]),
+                  ),
+                  if (i < stages.length - 1)
+                    const Icon(Icons.arrow_forward_ios, size: 10, color: Color(0xFFBDC7B9)),
+                ]),
               );
-            },
+            }).toList(),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _FilterChip extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+  const _FilterChip({required this.label, required this.selected, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: selected ? const Color(0xFF2E7D32) : Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: selected ? const Color(0xFF2E7D32) : const Color(0xFFDDE3D9)),
+        ),
+        child: Text(label,
+          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600,
+            color: selected ? Colors.white : const Color(0xFF4A5A4D))),
       ),
     );
   }

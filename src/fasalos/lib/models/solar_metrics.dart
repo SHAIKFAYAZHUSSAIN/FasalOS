@@ -49,6 +49,8 @@ class SolarTelemetry {
   final double coldRoomKw; // e.g. 4.2 kW compressor load
   final double batterySocPct; // e.g. 86% state of charge
   final bool isSimulated;
+  final double chamberTempC;
+  final int humidity;
 
   const SolarTelemetry({
     required this.generatedKwh,
@@ -60,5 +62,7 @@ class SolarTelemetry {
     required this.coldRoomKw,
     required this.batterySocPct,
     this.isSimulated = true,
+    this.chamberTempC = 11.8,
+    this.humidity = 88,
   });
 }
