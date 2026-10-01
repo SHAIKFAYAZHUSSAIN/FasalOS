@@ -507,11 +507,39 @@ class _MobileShell extends StatelessWidget {
         onDestinationSelected: onNavigateTab,
         backgroundColor: Colors.white,
         indicatorColor: FasalColors.primaryGreenSubtle,
-        destinations: navItems.asMap().entries.map((e) => NavigationDestination(
-          icon: Icon(e.value.outlinedIcon),
-          selectedIcon: Icon(e.value.selectedIcon, color: FasalColors.primaryGreen),
-          label: e.value.label.split(' ').first,
-        )).toList(),
+        labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+        destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.grid_view_rounded),
+            selectedIcon: Icon(Icons.grid_view, color: FasalColors.primaryGreen),
+            label: 'Hub',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.solar_power_rounded),
+            selectedIcon: Icon(Icons.solar_power, color: FasalColors.primaryGreen),
+            label: 'Solar',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.trending_up_rounded),
+            selectedIcon: Icon(Icons.trending_up, color: FasalColors.primaryGreen),
+            label: 'Markets',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.layers_rounded),
+            selectedIcon: Icon(Icons.layers, color: FasalColors.primaryGreen),
+            label: 'Batch',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.storefront_rounded),
+            selectedIcon: Icon(Icons.storefront, color: FasalColors.primaryGreen),
+            label: 'Buyer',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.account_balance_rounded),
+            selectedIcon: Icon(Icons.account_balance, color: FasalColors.primaryGreen),
+            label: 'Settle',
+          ),
+        ],
       ),
     );
   }

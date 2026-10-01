@@ -125,37 +125,42 @@ class _HubDashboardViewState extends State<HubDashboardView> {
           SizedBox(height: isDesktop ? 28 : 16),
 
           // ── Lots section ─────────────────────────────────────────────
-          Row(
-            children: [
-              Text('Active Farm Lots',
-                style: TextStyle(fontSize: isDesktop ? 18 : 15,
-                  fontWeight: FontWeight.w800, color: const Color(0xFF12251A))),
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(color: const Color(0xFFE8F5E9), borderRadius: BorderRadius.circular(20)),
-                child: Text('${filtered.length}',
-                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF2E7D32))),
+          // Title + Add button row
+          Row(children: [
+            Text('Active Farm Lots',
+              style: TextStyle(fontSize: isDesktop ? 18 : 15,
+                fontWeight: FontWeight.w800, color: const Color(0xFF12251A))),
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(color: const Color(0xFFE8F5E9), borderRadius: BorderRadius.circular(20)),
+              child: Text('${filtered.length}',
+                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF2E7D32))),
+            ),
+            const Spacer(),
+            FilledButton.icon(
+              onPressed: _openIntake,
+              icon: const Icon(Icons.add, size: 18),
+              label: Text(isDesktop ? 'Add Produce' : 'Add',
+                style: const TextStyle(fontWeight: FontWeight.w700)),
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFF2E7D32),
+                padding: EdgeInsets.symmetric(horizontal: isDesktop ? 18 : 12, vertical: 10),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               ),
-              const Spacer(),
-              // Filter chips
-              ...['All', 'Tomatoes', 'Onions', 'Chillies'].map((c) => Padding(
-                padding: const EdgeInsets.only(left: 6),
+            ),
+          ]),
+          const SizedBox(height: 10),
+          // Filter chips — horizontal scroll on mobile
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(),
+            child: Row(
+              children: ['All', 'Tomatoes', 'Onions', 'Chillies'].map((c) => Padding(
+                padding: const EdgeInsets.only(right: 8),
                 child: _FilterChip(label: c, selected: _filter == c, onTap: () => setState(() => _filter = c)),
-              )),
-              const SizedBox(width: 12),
-              // Add button
-              FilledButton.icon(
-                onPressed: _openIntake,
-                icon: const Icon(Icons.add, size: 18),
-                label: const Text('Add Produce', style: TextStyle(fontWeight: FontWeight.w700)),
-                style: FilledButton.styleFrom(
-                  backgroundColor: const Color(0xFF2E7D32),
-                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                ),
-              ),
-            ],
+              )).toList(),
+            ),
           ),
           const SizedBox(height: 16),
 
@@ -167,7 +172,7 @@ class _HubDashboardViewState extends State<HubDashboardView> {
               physics: const NeverScrollableScrollPhysics(),
               gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: cols, crossAxisSpacing: 14, mainAxisSpacing: 14,
-                childAspectRatio: 1.1,
+                mainAxisExtent: 300,
               ),
               itemCount: filtered.length,
               itemBuilder: (_, i) => PhotoProduceCard(
@@ -211,7 +216,7 @@ class _KpiRow extends StatelessWidget {
         crossAxisCount: cols, shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
         crossAxisSpacing: 14, mainAxisSpacing: 14,
-        childAspectRatio: cols == 4 ? 2.0 : 1.7,
+        mainAxisExtent: 180,
         children: kpis.map((k) => _KpiCard(data: k, onNavigateTab: onNavigateTab)).toList(),
       );
     });
@@ -255,7 +260,7 @@ class _KpiCard extends StatelessWidget {
                 Icon(Icons.arrow_forward_ios, size: 12, color: data.color.withOpacity(0.5)),
             ]),
             const Spacer(),
-            Text(data.value, style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: const Color(0xFF12251A), letterSpacing: -0.5)),
+            Text(data.value, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: const Color(0xFF12251A), letterSpacing: -0.5)),
             const SizedBox(height: 3),
             Text(data.title, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF4A5A4D))),
             Text(data.sub, style: const TextStyle(fontSize: 11, color: Color(0xFF8AA890))),
@@ -272,17 +277,18 @@ class _PipelineBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Short labels that won't word-wrap on mobile
     final stages = [
-      ('Received', state.lots.where((l) => l.stage == LotStage.received).length, const Color(0xFF6B8F72)),
+      ('In', state.lots.where((l) => l.stage == LotStage.received).length, const Color(0xFF6B8F72)),
       ('Graded', state.lots.where((l) => l.stage == LotStage.graded).length, const Color(0xFFD97706)),
-      ('Cold Store', state.lots.where((l) => l.stage == LotStage.stored).length, const Color(0xFF0284C7)),
+      ('Stored', state.lots.where((l) => l.stage == LotStage.stored).length, const Color(0xFF0284C7)),
       ('Matched', state.lots.where((l) => l.stage == LotStage.matched).length, const Color(0xFF7B3F00)),
-      ('Dispatched', state.lots.where((l) => l.stage == LotStage.dispatched).length, const Color(0xFF2E7D32)),
-      ('Delivered', state.lots.where((l) => l.stage == LotStage.delivered).length, const Color(0xFF1B4D24)),
+      ('Transit', state.lots.where((l) => l.stage == LotStage.dispatched).length, const Color(0xFF2E7D32)),
+      ('Done', state.lots.where((l) => l.stage == LotStage.delivered).length, const Color(0xFF1B4D24)),
     ];
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
@@ -293,8 +299,8 @@ class _PipelineBanner extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text('Supply Chain Pipeline',
-            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF4A5A4D))),
-          const SizedBox(height: 12),
+            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF4A5A4D))),
+          const SizedBox(height: 10),
           Row(
             children: stages.asMap().entries.map((e) {
               final i = e.key;
@@ -303,13 +309,19 @@ class _PipelineBanner extends StatelessWidget {
                 child: Row(children: [
                   Expanded(
                     child: Column(children: [
-                      Text('${s.$2}', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: s.$3)),
-                      const SizedBox(height: 4),
-                      Text(s.$1, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF6B8F72))),
+                      Text('${s.$2}',
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: s.$3)),
+                      const SizedBox(height: 2),
+                      Text(s.$1,
+                        style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: Color(0xFF6B8F72)),
+                        maxLines: 1,
+                        overflow: TextOverflow.clip,
+                        textAlign: TextAlign.center,
+                      ),
                     ]),
                   ),
                   if (i < stages.length - 1)
-                    const Icon(Icons.arrow_forward_ios, size: 10, color: Color(0xFFBDC7B9)),
+                    const Icon(Icons.chevron_right, size: 12, color: Color(0xFFBDC7B9)),
                 ]),
               );
             }).toList(),

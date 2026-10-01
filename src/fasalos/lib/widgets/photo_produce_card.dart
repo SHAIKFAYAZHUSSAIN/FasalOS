@@ -239,8 +239,9 @@ class PhotoProduceCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   // Stage pill & Freshness
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 6,
                     children: [
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
