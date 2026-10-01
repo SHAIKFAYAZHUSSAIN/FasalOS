@@ -1,6 +1,6 @@
 {
   "buildCommand": null,
-  "outputDirectory": "src/fasalos/build/web",
+  "outputDirectory": "flutter_web",
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
   ]
